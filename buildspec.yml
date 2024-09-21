@@ -1,0 +1,23 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo Installing dependencies...
+      - npm install # Or other package manager commands, such as pip install -r requirements.txt
+  build:
+    commands:
+      - echo Build started on `date`
+      - npm run build # The actual build commands (e.g., compiling, packaging, etc.)
+
+artifacts:
+  files:
+    - '**/*' # Adjust this to include specific files or directories, if necessary
+  discard-paths: yes # Discard the original file paths in the artifact ZIP file
+  base-directory: build # Use if you want to point to a specific directory for artifacts
+
+cache:
+  paths:
+    - 'node_modules/**/*' # Cache specific directories between builds (if applicable)
