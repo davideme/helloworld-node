@@ -1,23 +1,27 @@
 version: 0.2
 
 phases:
-  install:
-    runtime-versions:
-      nodejs: 20
+  pre_build:
     commands:
-      - echo Installing dependencies...
-      - npm install # Or other package manager commands, such as pip install -r requirements.txt
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin 111122223333.dkr.ecr.us-west-2.amazonaws.com
+      - REPOSITORY_URI=012345678910.dkr.ecr.us-west-2.amazonaws.com/hello-world
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
   build:
     commands:
       - echo Build started on `date`
-      - npm run build # The actual build commands (e.g., compiling, packaging, etc.)
-
+      - echo Building the Docker image...
+      - docker build -t $REPOSITORY_URI:latest .
+      - docker tag $REPOSITORY_URI:latest $REPOSITORY_URI:$IMAGE_TAG
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker images...
+      - docker push $REPOSITORY_URI:latest
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"hello-world","imageUri":"%s"}]' $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 artifacts:
-  files:
-    - '**/*' # Adjust this to include specific files or directories, if necessary
-  discard-paths: yes # Discard the original file paths in the artifact ZIP file
-  base-directory: build # Use if you want to point to a specific directory for artifacts
-
-cache:
-  paths:
-    - 'node_modules/**/*' # Cache specific directories between builds (if applicable)
+    files: imagedefinitions.json
